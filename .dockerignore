@@ -1,0 +1,12 @@
+node_modules/
+dashboard/node_modules/
+dist/
+dashboard/dist/
+*.db
+*.sqlite
+*.sqlite3
+.env
+.git
+.vscode/
+*.code-workspace
+PLAN.md
