@@ -2,29 +2,24 @@ import Database from 'better-sqlite3';
 import { mkdirSync } from 'fs';
 import { dirname } from 'path';
 import { cfg } from '../config.js';
-import { DDL, SCHEMA_VERSION } from './schema.js';
+import { DDL } from './schema.js';
 
 let _db: Database.Database | null = null;
 
+function runMigrations(db: Database.Database): void {
+  try {
+    db.exec('ALTER TABLE renamed_images ADD COLUMN captured_at TEXT');
+  } catch (err: any) {
+    if (!err.message?.includes('duplicate column name')) throw err;
+  }
+}
+
 export function getDb(): Database.Database {
   if (_db) return _db;
-
-  // Ensure the parent directory exists
   mkdirSync(dirname(cfg.dbPath), { recursive: true });
-
   _db = new Database(cfg.dbPath);
-
-  // Run schema DDL (all CREATE IF NOT EXISTS — safe to re-run)
   _db.exec(DDL);
-
-  // Stamp schema version if not already set
-  const ver = _db.prepare('SELECT version FROM schema_version ORDER BY rowid DESC LIMIT 1').get() as
-    | { version: number }
-    | undefined;
-  if (!ver) {
-    _db.prepare('INSERT INTO schema_version (version) VALUES (?)').run(SCHEMA_VERSION);
-  }
-
+  runMigrations(_db);
   return _db;
 }
 

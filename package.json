@@ -1,26 +1,30 @@
 {
   "name": "astro-db",
-  "version": "1.0.0",
-  "description": "Personal astronomy SQLite database CLI — indexes FITS stacks, imaging sessions, and renamed images.",
+  "version": "2.0.0",
+  "description": "Personal astronomy SQLite database — schema and read-only analytics dashboard.",
   "author": "tcgardner@gmail.com",
   "license": "MIT",
   "type": "module",
+  "workspaces": ["dashboard"],
   "engines": {
     "node": ">=18"
   },
   "scripts": {
-    "build": "tsc",
-    "start": "node dist/main.js",
-    "dev": "tsx src/main.ts"
+    "build": "tsc && npm run build --workspace=dashboard",
+    "dev": "concurrently \"npx tsx src/main.ts db serve\" \"npm run dev --workspace=dashboard\"",
+    "start": "node dist/main.js db serve"
   },
   "dependencies": {
     "better-sqlite3": "^12.10.0",
     "commander": "^12.1.0",
-    "dotenv": "^16.4.0"
+    "dotenv": "^16.4.0",
+    "express": "^4.21.0"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
+    "@types/express": "^4.17.21",
     "@types/node": "^22.0.0",
+    "concurrently": "^9.1.0",
     "tsx": "^4.19.0",
     "typescript": "^5.5.0"
   }

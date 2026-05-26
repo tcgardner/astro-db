@@ -1,9 +1,5 @@
 import { upsertTarget } from '../db/queries/targets.js';
 
-/**
- * Seed the targets table with the Messier and Caldwell catalogs.
- * Safe to call multiple times — upsertTarget is idempotent.
- */
 export function seedTargets(): number {
   let inserted = 0;
 
@@ -121,8 +117,7 @@ export function seedTargets(): number {
   ];
 
   for (const [num, name] of messier) {
-    const id = upsertTarget({ catalog_id: `M${num}`, messier_num: num, common_name: name });
-    if (id) inserted++;
+    if (upsertTarget({ catalog_id: `M${num}`, messier_num: num, common_name: name })) inserted++;
   }
 
   const caldwell: Array<[number, string]> = [
@@ -238,8 +233,7 @@ export function seedTargets(): number {
   ];
 
   for (const [num, name] of caldwell) {
-    const id = upsertTarget({ catalog_id: `C${num}`, caldwell_num: num, common_name: name });
-    if (id) inserted++;
+    if (upsertTarget({ catalog_id: `C${num}`, caldwell_num: num, common_name: name })) inserted++;
   }
 
   return inserted;

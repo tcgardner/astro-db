@@ -14,24 +14,14 @@ function parseInt_(key: string, defaultValue = 0): number {
 
 class Config {
   readonly dbPath: string;
-  readonly stacksDir: string;
-  readonly renamerOutputDir: string;
-  readonly sessionGapMinutes: number;
+  readonly port: number;
 
   constructor() {
     this.dbPath = optional(
       'DB_PATH',
       resolve('C:\\Users\\tcgar\\astro\\astrophoto\\astro.db'),
     );
-    this.stacksDir = optional(
-      'STACKS_DIR',
-      resolve('C:\\Users\\tcgar\\astro\\astrophoto\\stacks'),
-    );
-    this.renamerOutputDir = optional(
-      'RENAMER_OUTPUT_DIR',
-      resolve('C:\\Users\\tcgar\\astro\\astrophoto\\tools\\astro-photo-renamer\\output'),
-    );
-    this.sessionGapMinutes = parseInt_('SESSION_GAP_MINUTES', 30);
+    this.port = parseInt_('PORT', 3001);
   }
 }
 
