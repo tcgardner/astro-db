@@ -9,8 +9,8 @@ if ! command -v node &>/dev/null; then
   echo "Error: Node.js is not installed." >&2; exit 1
 fi
 NODE_MAJOR=$(node --version | sed 's/v//' | cut -d. -f1)
-if [ "$NODE_MAJOR" -lt 18 ]; then
-  echo "Error: Node.js 18+ required (found $(node --version))." >&2; exit 1
+if [ "$NODE_MAJOR" -lt 24 ]; then
+  echo "Error: Node.js 24+ required (found $(node --version))." >&2; exit 1
 fi
 
 # 2. .env must exist

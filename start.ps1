@@ -7,8 +7,8 @@ if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
     Write-Error "Node.js is not installed."; exit 1
 }
 $nodeVer = (node --version) -replace '^v', ''
-if ([int]($nodeVer.Split('.')[0]) -lt 18) {
-    Write-Error "Node.js 18+ required (found v$nodeVer)."; exit 1
+if ([int]($nodeVer.Split('.')[0]) -lt 24) {
+    Write-Error "Node.js 24+ required (found v$nodeVer)."; exit 1
 }
 
 # 2. .env must exist

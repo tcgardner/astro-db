@@ -56,6 +56,21 @@ sessionsRouter.get('/moon', (_req, res) => {
   res.json(rows);
 });
 
+sessionsRouter.get('/facets', (_req, res) => {
+  const db = getDb();
+  const filters = (db.prepare(
+    `SELECT DISTINCT filter FROM sessions WHERE filter IS NOT NULL ORDER BY filter`
+  ).all() as { filter: string }[]).map(r => r.filter);
+  const constellations = (db.prepare(`
+    SELECT DISTINCT t.constellation
+    FROM targets t
+    INNER JOIN sessions s ON s.target_id = t.id
+    WHERE t.constellation IS NOT NULL
+    ORDER BY t.constellation
+  `).all() as { constellation: string }[]).map(r => r.constellation);
+  res.json({ filters, constellations });
+});
+
 sessionsRouter.get('/funnel', (_req, res) => {
   const db = getDb();
   const rows = db.prepare(`

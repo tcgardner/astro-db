@@ -5,6 +5,13 @@ echo -- astro-db --
 
 where node >nul 2>&1 || (echo Error: Node.js is not installed. && exit /b 1)
 
+for /f "tokens=*" %%v in ('node --version') do set NODE_VER=%%v
+for /f "tokens=1 delims=." %%m in ("%NODE_VER:v=%") do set NODE_MAJOR=%%m
+if %NODE_MAJOR% LSS 24 (
+    echo Error: Node.js 24+ required ^(found %NODE_VER%^).
+    exit /b 1
+)
+
 if not exist .env (
     echo Error: .env not found. Run: copy .env.example .env
     exit /b 1

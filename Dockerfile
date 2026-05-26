@@ -1,5 +1,5 @@
 # ── Stage 1: Build ─────────────────────────────────────────────────────────────
-FROM node:22 AS build
+FROM node:24-alpine AS build
 WORKDIR /app
 
 # Copy lockfiles first for layer-cache efficiency
@@ -14,7 +14,7 @@ COPY dashboard ./dashboard
 RUN npm run build
 
 # ── Stage 2: Runtime ───────────────────────────────────────────────────────────
-FROM node:22-slim AS runtime
+FROM node:24-slim AS runtime
 WORKDIR /app
 
 # Install curl for healthcheck (before switching to non-root user)
