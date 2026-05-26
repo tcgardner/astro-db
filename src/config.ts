@@ -1,5 +1,5 @@
 import dotenv from 'dotenv';
-import { resolve } from 'path';
+import { resolve, dirname } from 'path';
 
 dotenv.config();
 
@@ -14,6 +14,7 @@ function parseInt_(key: string, defaultValue = 0): number {
 
 class Config {
   readonly dbPath: string;
+  readonly imagesDir: string;
   readonly port: number;
 
   constructor() {
@@ -21,6 +22,8 @@ class Config {
       'DB_PATH',
       resolve('C:\\Users\\tcgar\\astro\\astrophoto\\astro.db'),
     );
+    // Default: images/ alongside the DB file. Override with IMAGES_DIR env var.
+    this.imagesDir = optional('IMAGES_DIR', resolve(dirname(this.dbPath), 'images'));
     this.port = parseInt_('PORT', 3001);
   }
 }

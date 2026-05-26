@@ -106,6 +106,7 @@ CREATE INDEX IF NOT EXISTS idx_light_frames_captured ON light_frames(captured_at
 CREATE INDEX IF NOT EXISTS idx_sessions_target       ON sessions(target_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_date         ON sessions(session_date);
 CREATE INDEX IF NOT EXISTS idx_stacks_target         ON stacks(target_id);
-CREATE INDEX IF NOT EXISTS idx_renamed_target        ON renamed_images(target_id);
-CREATE INDEX IF NOT EXISTS idx_renamed_catalog       ON renamed_images(catalog_id);
+CREATE INDEX        IF NOT EXISTS idx_renamed_target          ON renamed_images(target_id);
+CREATE INDEX        IF NOT EXISTS idx_renamed_catalog         ON renamed_images(catalog_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_renamed_catalog_filename ON renamed_images(catalog_id, filename);
 `;
