@@ -1,73 +1,108 @@
 # astro-db
 
-Personal astronomy SQLite database — index FITS light frames, stacked images, imaging sessions, and renamed images from your astrophotography workflow.
+Personal astronomy SQLite database — schema definition and read-only analytics dashboard for astrophotography data.
 
-## Features
+astro-db owns the schema and serves the dashboard. All data (light frames, sessions, stacks, renamed images) is written by other tools in the ecosystem.
 
-- **`db init`** — create the database, apply schema, and seed the DSO catalog (Messier, Caldwell, NGC, IC objects)
-- **`import stacks`** — scan a stacks directory for FITS files; imports light frames, stacked images, and auto-groups them into imaging sessions
-- **`import csv`** — import a [seestar-imaging-logger](https://github.com/tcgardner/seestar-imaging-logger) CSV export into `imaging_sessions`
-- **`import renamer`** — import an [astro-photo-renamer](https://github.com/tcgardner/astro-photo-renamer) `run_log.json` into `renamed_images`
-- **`db stats`** — print row counts for all tables
-- **`db path`** — print the resolved database file path
+## Ecosystem
 
-## Requirements
+| Tool | Role |
+|---|---|
+| **astro-db** | Schema owner + read-only analytics dashboard |
+| **seestar-imaging-logger** | Writes `sessions`; reads sessions to produce output |
+| **astro-photo-renamer** | Produces `run_log.json` consumed by the renamer importer |
+| **messier-photos** | Reads `renamed_images` for its DSO image catalog |
 
-- Node.js 18+
-- Windows (default paths are Windows-style; override via `.env` for other platforms)
+## Getting Started
+
+```bash
+# 1. Copy and edit env
+cp .env.example .env
+# Edit DB_PATH (path to your SQLite file) and PORT (default: 3001)
+
+# 2. Install dependencies (root + dashboard workspace)
+npm install
+
+# 3. Initialize the database (first run only)
+npx tsx src/main.ts db init
+
+# 4. Start the server + dashboard
+npm run dev
+```
+
+Or use the startup script (handles steps 3 and 4 automatically):
+
+```bash
+bash start.sh          # macOS / Linux / Git Bash
+./start.ps1            # PowerShell (Windows)
+start.cmd              # CMD (Windows)
+```
+
+Open the dashboard at **http://localhost:5173** (Vite dev) or **http://localhost:3001** (production build served by Express).
+
+## Commands
+
+```sh
+# First run — create schema and seed the DSO catalog
+npx tsx src/main.ts db init
+
+# Start the analytics dashboard (default port 3001)
+npx tsx src/main.ts db serve
+```
 
 ## Setup
 
 ```sh
 cp .env.example .env
-# Edit .env to set your paths
+# Edit .env to set DB_PATH and PORT
 npm install
-npm run build   # or: npx tsx src/main.ts ...
+npm run build
 ```
 
 ## Configuration
 
-All settings are read from environment variables (`.env` file supported via dotenv).
-
 | Variable | Default | Description |
 |---|---|---|
 | `DB_PATH` | `C:\astro\astrophoto\astro.db` | Path to the SQLite database file |
-| `STACKS_DIR` | `C:\astro\astrophoto\stacks` | Root directory scanned by `import stacks` |
-| `RENAMER_OUTPUT_DIR` | `...\astro-photo-renamer\output` | Directory containing `run_log.json` |
-| `SESSION_GAP_MINUTES` | `30` | Max gap (minutes) between frames before a new session is created |
+| `PORT` | `3001` | Port for the Express API and dashboard server |
 
-## Usage
+## Dashboard
 
-```sh
-# Initialize (first run)
-npx tsx src/main.ts db init
+Open `http://localhost:3001` after running `db serve`.
 
-# Import stacks from default directory
-npx tsx src/main.ts import stacks
-
-# Import stacks from a specific directory
-npx tsx src/main.ts import stacks "D:\captures\2025-05-10"
-
-# Import a CSV log
-npx tsx src/main.ts import csv imaging_log.csv
-
-# Import renamer output
-npx tsx src/main.ts import renamer
-
-# Show table row counts
-npx tsx src/main.ts db stats
-```
+| View | What it shows |
+|---|---|
+| Overview | Total hours, sessions, targets imaged; integration over time |
+| Targets | Integration time per target |
+| Filter breakdown | L / Ha / OIII / RGB balance per target |
+| Session calendar | Imaging activity heatmap by date |
+| Sessions | Full session list, sortable and filterable |
+| Moon correlation | Session quality vs. moon illumination |
+| Pipeline | Captured → stacked → processed → published funnel |
+| Sites | Integration hours and sessions by imaging location |
+| Seeing trends | Seeing and transparency over time |
 
 ## Schema
 
-| Table | Description |
-|---|---|
-| `targets` | DSO catalog (Messier, Caldwell, NGC, IC) |
-| `imaging_sessions` | One row per night/filter/target session |
-| `light_frames` | Individual FITS light frames |
-| `stacked_images` | Stacked FITS outputs |
-| `renamed_images` | Files processed by astro-photo-renamer |
-| `import_runs` | Audit log of each import run |
+| Table | Description | Written by |
+|---|---|---|
+| `targets` | DSO catalog (Messier, Caldwell, NGC, IC) | astro-db (`db init`) |
+| `sessions` | One row per target + date + filter session | seestar-imaging-logger |
+| `light_frames` | Individual raw FITS light frames | TBD |
+| `stacks` | Seestar S30 Pro FITS stacks | TBD |
+| `renamed_images` | In-app JPGs renamed by astro-photo-renamer | TBD |
+| `sites` | Imaging locations (backyard, dark site, etc.) | TBD |
+| `import_runs` | Audit log of data import operations | Writing apps |
+
+## Development
+
+```sh
+# Starts Express (port 3001) and Vite dev server (port 5173) concurrently
+npm run dev
+
+# Build the dashboard for production
+npm run build
+```
 
 ## License
 
