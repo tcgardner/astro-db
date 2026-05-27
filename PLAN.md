@@ -272,3 +272,153 @@ PORT=3001   # Express API / dashboard server port
    - Pipeline funnel
    - Site comparison
 8. Update README
+
+---
+
+## Feature Plan: Renamed Images Tab
+
+### Goal
+
+Add a "Renamed Images" tab to the existing React dashboard that shows all rows in `renamed_images` — with thumbnails, metadata, filtering by catalog_id, set-primary, and delete.
+
+### Design decision: extend the existing dashboard
+
+No new server or build tooling needed. The React dashboard (`dashboard/`) is already the right home — it uses Tailwind, React Router, and the `/api` proxy. Adding a new view follows the exact pattern of every existing view.
+
+---
+
+### API changes — `src/api/routes/images.ts`
+
+Two endpoints are missing for the view:
+
+#### 1. `GET /api/images` (new)
+
+List all `renamed_images`, optional `?catalog_id=` filter.
+
+```sql
+SELECT id, filename, original_filename, catalog_id, common_name,
+       captured_at, id_stage, is_primary, created_at
+FROM renamed_images
+[WHERE catalog_id = ?]   -- only when query param is present
+ORDER BY catalog_id ASC, is_primary DESC, captured_at DESC
+```
+
+- Returns JSON array.
+- Must be registered **before** `/:catalogId` in the router so `/api/images` is not swallowed by that catch-all (the root path `''` vs `'/:catalogId'` don't conflict in Express, but ordering matters for clarity).
+
+#### 2. `DELETE /api/images/:id` (new)
+
+Delete one image: remove DB row + file from disk.
+
+Steps:
+1. Parse `id` — 400 if NaN.
+2. Look up `file_path` from DB — 404 if not found.
+3. Delete file from disk (ignore `ENOENT` — row may exist without file).
+4. Delete DB row.
+5. Return 204 No Content.
+
+---
+
+### Dashboard changes
+
+#### New file: `dashboard/src/views/RenamedImages.tsx`
+
+**State (managed locally — not via `useFetch` — because we need manual refetch after mutations):**
+
+```ts
+const [images, setImages]   = useState<RenamedImage[]>([]);
+const [loading, setLoading] = useState(true);
+const [error, setError]     = useState<string | null>(null);
+const [filter, setFilter]   = useState('');   // catalog_id text input
+const [pending, setPending] = useState(false); // true while a mutation is in-flight
+```
+
+Fetch logic lives in a `useCallback`-wrapped `loadImages()` that builds the URL:
+```ts
+const url = filter.trim()
+  ? `/api/images?catalog_id=${encodeURIComponent(filter.trim())}`
+  : '/api/images';
+```
+Called on mount and after every mutation. No debounce — filter triggers on form submit / Enter key, keeping fetches predictable.
+
+**`RenamedImage` interface:**
+```ts
+interface RenamedImage {
+  id: number;
+  filename: string;
+  original_filename: string;
+  catalog_id: string;
+  common_name: string | null;
+  captured_at: string | null;
+  id_stage: string;
+  is_primary: number;   // 0 | 1
+  created_at: string;
+}
+```
+
+**Layout:**
+```
+┌──────────────────────────────────────────────┐
+│ Renamed Images                    [42 images] │
+│ [catalog_id filter input] [Search]            │
+├────┬───────────┬──────────────────┬───────────┤
+│ 64px│ Catalog  │ Filename / Stage │ Actions   │
+│ thumb│ + name  │ Captured at      │           │
+├────┴───────────┴──────────────────┴───────────┤
+│ <img> │ M31 · Andromeda… │ M31_…jpg [primary] │  [Set Primary] [Delete]
+│        │                  │ 2025-11-04         │
+│ …                                             │
+└──────────────────────────────────────────────┘
+```
+
+**Table columns:**
+| Column | Content |
+|---|---|
+| Thumbnail | `<img src="/api/images/{id}/file" loading="lazy" />` — 64×64, `object-cover`, rounded |
+| Target | `catalog_id` bold + `common_name` muted below |
+| File | `filename` + `id_stage` badge (pill: `ai_vision` / `plate_solve` / `exif`) + `captured_at` date below |
+| Primary | Indigo "Primary" pill if `is_primary = 1`, else empty |
+| Actions | "Set Primary" button (hidden when already primary) + "Delete" button (red) |
+
+**Interactions:**
+
+- *Filter*: controlled text input, submit on Enter or button click — calls `loadImages()`.
+- *Set Primary*: `PATCH /api/images/:id/primary` → optimistic-UI or just `loadImages()` after.
+- *Delete*: `window.confirm('Delete this image?')` → `DELETE /api/images/:id` → `loadImages()`.
+
+Both mutations set `pending = true` during the request, disabling all action buttons to prevent double-fire.
+
+#### Edit: `dashboard/src/App.tsx`
+
+Two additions, matching the existing pattern exactly:
+
+```ts
+// import
+import RenamedImages from './views/RenamedImages.tsx';
+
+// NAV array — add one entry
+{ to: '/images', label: 'Images' },
+
+// Routes — add one route
+<Route path="/images" element={<RenamedImages />} />
+```
+
+Place the nav entry between `Pipeline` and `Sites` (thematically fits — images are pipeline output).
+
+---
+
+### What is NOT changing
+
+- No new npm packages.
+- No changes to the Vite config or proxy.
+- No changes to the Express server mount or `db serve` command.
+- No changes to existing routes or views.
+- The `POST /api/images/upload` and `PATCH /api/images/:id/primary` routes already exist and are unchanged (the view calls PATCH but doesn't re-implement it).
+
+---
+
+### Implementation order
+
+1. `src/api/routes/images.ts` — add `GET /` and `DELETE /:id` handlers.
+2. `dashboard/src/views/RenamedImages.tsx` — new view, ~120 lines.
+3. `dashboard/src/App.tsx` — import + nav entry + route (3 lines each).

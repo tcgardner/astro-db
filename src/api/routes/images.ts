@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { existsSync, writeFileSync } from 'fs';
+import { existsSync, unlinkSync, writeFileSync } from 'fs';
 import { extname, join } from 'path';
 import multer from 'multer';
 import { getDb } from '../../db/index.js';
@@ -74,6 +74,42 @@ imagesRouter.post('/upload', upload.single('file'), (req, res) => {
   db.prepare('UPDATE renamed_images SET file_path = ? WHERE id = ?').run(storedPath, id);
 
   res.status(201).json({ id, filename, file_url: `/api/images/${id}/file` });
+});
+
+// GET /api/images — list all images, optional ?catalog_id= filter
+imagesRouter.get('/', (req, res) => {
+  const db = getDb();
+  const { catalog_id } = req.query as { catalog_id?: string };
+  const rows = catalog_id
+    ? db.prepare(`
+        SELECT id, filename, original_filename, catalog_id, common_name,
+               captured_at, id_stage, is_primary, created_at
+        FROM renamed_images
+        WHERE catalog_id = ?
+        ORDER BY is_primary DESC, captured_at DESC, created_at DESC
+      `).all(catalog_id)
+    : db.prepare(`
+        SELECT id, filename, original_filename, catalog_id, common_name,
+               captured_at, id_stage, is_primary, created_at
+        FROM renamed_images
+        ORDER BY catalog_id ASC, is_primary DESC, captured_at DESC, created_at DESC
+      `).all();
+  res.json(rows);
+});
+
+// DELETE /api/images/:id — remove DB row and file from disk
+imagesRouter.delete('/:id', (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) { res.status(400).json({ error: 'Invalid id' }); return; }
+
+  const db = getDb();
+  const row = db.prepare('SELECT file_path FROM renamed_images WHERE id = ?').get(id) as
+    { file_path: string } | undefined;
+  if (!row) { res.status(404).json({ error: 'Not found' }); return; }
+
+  try { unlinkSync(row.file_path); } catch { /* ignore ENOENT */ }
+  db.prepare('DELETE FROM renamed_images WHERE id = ?').run(id);
+  res.status(204).end();
 });
 
 // GET /api/images/summary — one best image URL per catalog_id (primary preferred, else most recent)

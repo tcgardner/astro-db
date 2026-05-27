@@ -8,6 +8,7 @@ import Pipeline from './views/Pipeline.tsx';
 import Sites from './views/Sites.tsx';
 import SeeingTrends from './views/SeeingTrends.tsx';
 import Schema from './views/Schema.tsx';
+import RenamedImages from './views/RenamedImages.tsx';
 
 const NAV = [
   { to: '/overview',   label: 'Overview' },
@@ -16,6 +17,7 @@ const NAV = [
   { to: '/calendar',   label: 'Calendar' },
   { to: '/moon',       label: 'Moon' },
   { to: '/pipeline',   label: 'Pipeline' },
+  { to: '/images',     label: 'Images' },
   { to: '/sites',      label: 'Sites' },
   { to: '/seeing',     label: 'Seeing' },
   { to: '/schema',     label: 'Schema' },
@@ -54,6 +56,7 @@ export default function App() {
             <Route path="/calendar"  element={<Calendar />} />
             <Route path="/moon"      element={<MoonCorrelation />} />
             <Route path="/pipeline"  element={<Pipeline />} />
+            <Route path="/images"    element={<RenamedImages />} />
             <Route path="/sites"     element={<Sites />} />
             <Route path="/seeing"    element={<SeeingTrends />} />
             <Route path="/schema"    element={<Schema />} />
