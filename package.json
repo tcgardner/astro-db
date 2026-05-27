@@ -14,7 +14,7 @@
   "scripts": {
     "build": "tsc && npm run build --workspace=dashboard",
     "dev": "concurrently \"npx tsx src/main.ts db serve\" \"npm run dev --workspace=dashboard\"",
-    "start": "node dist/main.js db serve"
+    "start": "tsx src/main.ts db serve"
   },
   "dependencies": {
     "better-sqlite3": "^12.10.0",
