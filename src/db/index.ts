@@ -26,6 +26,9 @@ function runMigrations(db: Database.Database): void {
   tryAlter(db,
     'CREATE UNIQUE INDEX IF NOT EXISTS idx_renamed_catalog_filename ON renamed_images(catalog_id, filename)',
     ['already exists']);
+  tryAlter(db,
+    'ALTER TABLE renamed_images ADD COLUMN is_primary INTEGER NOT NULL DEFAULT 0',
+    ['duplicate column name']);
 }
 
 export function getDb(): Database.Database {

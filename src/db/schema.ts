@@ -87,6 +87,7 @@ CREATE TABLE IF NOT EXISTS renamed_images (
   processed_at      TEXT    NOT NULL,
   run_log_run_at    TEXT,
   notes             TEXT,
+  is_primary        INTEGER NOT NULL DEFAULT 0,
   created_at        TEXT    DEFAULT (datetime('now'))
 );
 

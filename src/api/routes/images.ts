@@ -76,27 +76,53 @@ imagesRouter.post('/upload', upload.single('file'), (req, res) => {
   res.status(201).json({ id, filename, file_url: `/api/images/${id}/file` });
 });
 
-// GET /api/images/summary — one best image URL per catalog_id (most recently inserted)
+// GET /api/images/summary — one best image URL per catalog_id (primary preferred, else most recent)
 imagesRouter.get('/summary', (_req, res) => {
   const db = getDb();
   const rows = db.prepare(`
-    SELECT r.catalog_id,
-           '/api/images/' || r.id || '/file' AS file_url
-    FROM renamed_images r
-    WHERE r.id IN (SELECT MAX(id) FROM renamed_images GROUP BY catalog_id)
+    SELECT catalog_id,
+           '/api/images/' || id || '/file' AS file_url
+    FROM (
+      SELECT catalog_id, id,
+             ROW_NUMBER() OVER (
+               PARTITION BY catalog_id
+               ORDER BY is_primary DESC, id DESC
+             ) AS rn
+      FROM renamed_images
+    )
+    WHERE rn = 1
   `).all() as { catalog_id: string; file_url: string }[];
   res.json(rows);
 });
 
-// GET /api/images/:catalogId — list images for a DSO
+// PATCH /api/images/:id/primary — designate an image as primary for its catalog_id
+imagesRouter.patch('/:id/primary', (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) { res.status(400).json({ error: 'Invalid id' }); return; }
+
+  const db = getDb();
+  const row = db.prepare('SELECT id, catalog_id FROM renamed_images WHERE id = ?').get(id) as
+    { id: number; catalog_id: string } | undefined;
+  if (!row) { res.status(404).json({ error: 'Not found' }); return; }
+
+  db.transaction(() => {
+    db.prepare('UPDATE renamed_images SET is_primary = 0 WHERE catalog_id = ? AND is_primary = 1')
+      .run(row.catalog_id);
+    db.prepare('UPDATE renamed_images SET is_primary = 1 WHERE id = ?').run(id);
+  })();
+
+  res.json({ id, catalog_id: row.catalog_id, is_primary: 1 });
+});
+
+// GET /api/images/:catalogId — list images for a DSO (primary first)
 imagesRouter.get('/:catalogId', (req, res) => {
   const db = getDb();
   const rows = db.prepare(`
     SELECT id, filename, original_filename, catalog_id, common_name,
-           captured_at, id_stage, processed_at, created_at
+           captured_at, id_stage, processed_at, created_at, is_primary
     FROM renamed_images
     WHERE catalog_id = ?
-    ORDER BY captured_at DESC, created_at DESC
+    ORDER BY is_primary DESC, captured_at DESC, created_at DESC
   `).all(req.params.catalogId) as Record<string, unknown>[];
 
   const withUrl = rows.map(r => ({ ...r, file_url: `/api/images/${r['id']}/file` }));
