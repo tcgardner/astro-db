@@ -80,3 +80,30 @@ sessionsRouter.get('/funnel', (_req, res) => {
   `).all();
   res.json(rows);
 });
+
+sessionsRouter.get('/targets', (req, res) => {
+  const db = getDb();
+  const { prefix } = req.query as Record<string, string>;
+
+  let sql = `
+    SELECT
+      t.catalog_id,
+      t.common_name,
+      COUNT(DISTINCT s.id)                          AS session_count,
+      COALESCE(SUM(s.frame_count), 0)               AS total_frames,
+      COALESCE(SUM(s.total_exposure_sec), 0)        AS total_exposure_sec
+    FROM targets t
+    INNER JOIN sessions s ON s.target_id = t.id
+    WHERE 1=1
+  `;
+  const params: string[] = [];
+
+  if (prefix) {
+    sql += ` AND UPPER(t.catalog_id) LIKE UPPER(?)`;
+    params.push(`${prefix}%`);
+  }
+
+  sql += ` GROUP BY t.catalog_id, t.common_name ORDER BY t.catalog_id`;
+
+  res.json(db.prepare(sql).all(...params));
+});
